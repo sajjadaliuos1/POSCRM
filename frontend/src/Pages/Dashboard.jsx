@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { Layout } from 'antd';
 import Sidemenu from '../Components/Sidemenu';
-import TopHeader from '../Components/TopHeader';
+import TopHeader from '../Components/Topheader';
 import DashboardContent from './DashboardContent';
-import Userdetails from './Userdetails';
+import Userdetails from './User/Userdetails';
 
 const { Content, Sider, Header } = Layout;
 

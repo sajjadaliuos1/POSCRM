@@ -7,10 +7,6 @@ import {
   KeyOutlined,
   AppstoreOutlined,
   TagsOutlined,
-  BarsOutlined,
-  BlockOutlined,
-  InboxOutlined,
-  ContainerOutlined,
   ShoppingCartOutlined,
   ContactsOutlined,
   BoxPlotOutlined,
@@ -48,23 +44,10 @@ const Sidemenu = ({ onMenuClick }) => {
         <Menu.Item key="/categories" icon={<TagsOutlined />}>
           Categories
         </Menu.Item>
-        <Menu.Item key="/variables" icon={<BarsOutlined />}>
-          Variables
-        </Menu.Item>
-        <Menu.Item key="/brands" icon={<BlockOutlined />}>
-          Brands
-        </Menu.Item>
-        <Menu.Item key="/units" icon={<InboxOutlined />}>
-          Units
-        </Menu.Item>
-        <Menu.Item key="/variations" icon={<ContainerOutlined />}>
-          Variations
-        </Menu.Item>
-        <Menu.Item key="/products" icon={<ShoppingCartOutlined />}>
+     <Menu.Item key="/products" icon={<ShoppingCartOutlined />}>
           Products
         </Menu.Item>
       </Menu.SubMenu>
-
       <Menu.Item key="/contacts" icon={<ContactsOutlined />}>
         Contacts
       </Menu.Item>
