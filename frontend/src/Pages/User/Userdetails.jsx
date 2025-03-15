@@ -11,6 +11,8 @@ import {
   Pagination,
   Modal,
   Form,
+  Menu,
+  Dropdown,
 } from "antd";
 import {
   SearchOutlined,
@@ -19,6 +21,7 @@ import {
   SettingOutlined,
   EditOutlined,
   DeleteOutlined,
+  ColumnHeightOutlined,
 } from "@ant-design/icons";
 import UserForm from "./UserForm";
 
@@ -88,6 +91,28 @@ const UserTable = () => {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [form] = Form.useForm();
   const [searchText, setSearchText] = useState("");
+  const [tableDensity, setTableDensity] = useState("middle"); // Default density
+
+  // Define density options
+  const densityOptions = [
+    { key: "large", label: "Default" },
+    { key: "middle", label: "Medium" },
+    { key: "small", label: "Compact" },
+  ];
+
+  // Handle density change
+  const handleTableSizeChange = ({ key }) => {
+    setTableDensity(key);
+  };
+
+  // Create density dropdown menu
+  const densityMenu = (
+    <Menu onClick={handleTableSizeChange}>
+      {densityOptions.map((option) => (
+        <Menu.Item key={option.key}>{option.label}</Menu.Item>
+      ))}
+    </Menu>
+  );
 
   useEffect(() => {
     let filteredData = initialData.filter(
@@ -236,6 +261,12 @@ const UserTable = () => {
           <Tooltip title="Fullscreen">
             <Button icon={<FullscreenOutlined />} onClick={handleFullscreen} />
           </Tooltip>
+          {/* Add density dropdown */}
+          <Tooltip title="Density">
+            <Dropdown overlay={densityMenu} placement="bottomRight">
+              <Button icon={<ColumnHeightOutlined />} />
+            </Dropdown>
+          </Tooltip>
           <Tooltip title="Settings">
             <Button icon={<SettingOutlined />} />
           </Tooltip>
@@ -246,9 +277,10 @@ const UserTable = () => {
           pagination={false}
           loading={loading}
           rowKey="key"
+          size={tableDensity} // Apply the density setting
         />
         <Pagination
-          style={{ justifyContent: "flex-end" }}
+          style={{ marginTop: 16, textAlign: "right" }}
           current={1}
           pageSize={25}
           total={data.length}
@@ -260,8 +292,10 @@ const UserTable = () => {
         visible={isModalVisible}
         onOk={handleOk}
         onCancel={handleCancel}
-        width={800} // Increase the width of the modal
-        style={{ top: 20 }} // Add some top margin
+      
+      footer={null}
+        width={800}
+        style={{ top: 20 }}
       >
         <Form form={form} layout="vertical">
           <UserForm record={null} CustomFields={() => <></>} />

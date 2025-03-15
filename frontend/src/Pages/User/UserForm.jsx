@@ -1,177 +1,158 @@
-import React, { useState } from 'react';
-import {
-  Divider,
-  Row,
-  Col,
-  Form,
-  Input,
-  Select,
-} from 'antd';
+import React, { useState } from "react";
+import { Divider, Row, Col, Form, Input, Select, Upload, Button, Image, message } from "antd";
+import { UploadOutlined } from "@ant-design/icons";
+import axios from "axios"; // Import Axios for API calls
 
 const { Option } = Select;
 
 export default function UserForm({ record, CustomFields }) {
-  const [commissionType, setCommissionType] = useState('percentage');
+  const [imageUrl, setImageUrl] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const isEditing = !!record; // Check if editing or creating new user
 
-  const handleCommissionTypeChange = (value) => {
-    setCommissionType(value);
+  // Handle Image Upload Preview
+  const handleImageChange = (info) => {
+    if (info.file.status === "done") {
+      const file = info.file.originFileObj;
+      const reader = new FileReader();
+      reader.onload = () => {
+        setImageUrl(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Handle Form Submission
+  const handleSubmit = async (values) => {
+    setLoading(true);
+    try {
+      const payload = {
+        ...values,
+        image: imageUrl, // Send image URL (or handle file upload separately)
+      };
+
+      if (isEditing) {
+        await axios.put(`/api/users/${record.id}`, payload); // Update user
+        message.success("User updated successfully!");
+      } else {
+        await axios.post("/api/users", payload); // Create new user
+        message.success("User created successfully!");
+      }
+    } 
+    catch {
+      message.error("An error occurred. Please try again.");
+    }
+    finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <>
+    <Form layout="vertical" onFinish={handleSubmit} initialValues={record || {}}>
       <Divider orientation="left">Personal Information</Divider>
       <Row gutter={16}>
         <Col span={8}>
           <Form.Item
-            name="name"
-            label="Name"
-            rules={[{ required: true, message: 'Please enter name!' }]}
+            name="fullName"
+            label="Full Name"
+            rules={[{ required: true, message: "Please enter full name!" }]}
           >
-            <Input placeholder="Enter your name" />
+            <Input placeholder="Enter full name" />
           </Form.Item>
         </Col>
         <Col span={8}>
           <Form.Item
-            name="email"
-            label="Email"
-            rules={[
-              { required: true, message: 'Please enter a valid email!', type: 'email' },
-            ]}
+            name="contact"
+            label="Contact"
+            rules={[{ required: true, message: "Please enter contact number!" }]}
           >
-            <Input placeholder="Enter your email" />
+            <Input placeholder="Enter contact number" />
           </Form.Item>
         </Col>
         <Col span={8}>
-          <Form.Item name="phone" label="Phone">
-            <Input placeholder="Enter your phone number" />
+          <Form.Item
+            name="address"
+            label="Address"
+            rules={[{ required: true, message: "Please enter address!" }]}
+          >
+            <Input.TextArea placeholder="Enter address" />
           </Form.Item>
         </Col>
       </Row>
-      <Divider orientation="left">Role & Permission</Divider>
+
+      <Divider orientation="left">Employment Details</Divider>
       <Row gutter={16}>
         <Col span={8}>
           <Form.Item
-            name="username"
-            label="Username"
-            rules={[{ required: true, message: 'Please enter a username!' }]}
+            name="status"
+            label="Status"
+            rules={[{ required: true, message: "Please select status!" }]}
           >
-            <Input placeholder="Enter a username" />
-          </Form.Item>
-        </Col>
-        {record === null && (
-          <>
-            <Col span={8}>
-              <Form.Item
-                name="password"
-                label="Password"
-                rules={[{ required: true, message: 'Please enter a password!' }]}
-              >
-                <Input.Password placeholder="Enter a password" />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item
-                name="password_confirmation"
-                label="Confirm Password"
-                rules={[
-                  { required: true, message: 'Please confirm your password!' },
-                  ({ getFieldValue }) => ({
-                    validator(_, value) {
-                      if (!value || getFieldValue('password') === value) {
-                        return Promise.resolve();
-                      }
-                      return Promise.reject(
-                        new Error('The two passwords do not match!')
-                      );
-                    },
-                  }),
-                ]}
-              >
-                <Input.Password placeholder="Confirm your password" />
-              </Form.Item>
-            </Col>
-          </>
-        )}
-        <Col span={8}>
-          <Form.Item
-            name="role_id"
-            label="Role"
-            rules={[{ required: true, message: 'Please select a role!' }]}
-          >
-            <Select placeholder="Select a role">
-              <Option value="admin">Admin</Option>
-              <Option value="user">User</Option>
+            <Select placeholder="Select status">
+              <Option value="active">Active</Option>
+              <Option value="inactive">Inactive</Option>
+              <Option value="on_leave">On Leave</Option>
             </Select>
           </Form.Item>
         </Col>
         <Col span={8}>
           <Form.Item
-            name="business_id"
-            label="Business"
-            rules={[{ required: true, message: 'Please select a business!' }]}
+            name="employeeType"
+            label="Employee Type"
+            rules={[{ required: true, message: "Please select employee type!" }]}
           >
-            <Select placeholder="Select a business">
-              <Option value="business1">Business 1</Option>
-              <Option value="business2">Business 2</Option>
+            <Select placeholder="Select employee type">
+              <Option value="full_time">Full-time</Option>
+              <Option value="part_time">Part-time</Option>
+              <Option value="contract">Contract</Option>
+              <Option value="freelancer">Freelancer</Option>
             </Select>
           </Form.Item>
         </Col>
-      </Row>
-      <Divider orientation="left">Incentives & Benefits</Divider>
-      <Row gutter={16}>
         <Col span={8}>
           <Form.Item
-            initialValue={'percentage'}
-            name="sales_commission"
-            label="Sales Commission Type"
+            name="salary"
+            label="Current Salary"
+            rules={[{ required: true, message: "Please enter salary!" }]}
           >
-            <Select
-              placeholder="Select a Commission Type"
-              onChange={handleCommissionTypeChange}
+            <Input type="number" placeholder="Enter current salary" />
+          </Form.Item>
+        </Col>
+      </Row>
+
+      <Divider orientation="left">Profile Picture</Divider>
+      <Row gutter={16}>
+        <Col span={8}>
+          <Form.Item name="image" label="Upload Image">
+            <Upload
+              listType="picture"
+              beforeUpload={() => false} // Prevent auto upload
+              onChange={handleImageChange}
+              maxCount={1}
             >
-              <Option value="fixed">Fixed</Option>
-              <Option value="percentage">Percentage</Option>
-            </Select>
+              <Button icon={<UploadOutlined />}>Select Image</Button>
+            </Upload>
           </Form.Item>
         </Col>
         <Col span={8}>
-          <Form.Item
-            name="commission_value"
-            label="Sales Commission Value"
-            rules={[
-              () => ({
-                validator(_, value) {
-                  if (commissionType === 'fixed') {
-                    if (value > 0) {
-                      return Promise.resolve();
-                    }
-                    return Promise.reject(
-                      new Error('Value must be greater than 0')
-                    );
-                  } else if (commissionType === 'percentage') {
-                    if (value > 0 && value < 100) {
-                      return Promise.resolve();
-                    }
-                    return Promise.reject(
-                      new Error('Value must be between 0 and 100')
-                    );
-                  }
-                  return Promise.resolve();
-                },
-              }),
-            ]}
-          >
-            <Input type="number" />
-          </Form.Item>
-        </Col>
-        <Col span={8}>
-          <Form.Item name="max_discount" label="Max Discount Allowed">
-            <Input type="number" placeholder="Enter max discount allowed!" />
-          </Form.Item>
+          {imageUrl && <Image width={100} src={imageUrl} alt="Profile Preview" />}
         </Col>
       </Row>
-      {/* Conditionally render CustomFields if it's provided */}
-      {CustomFields && <CustomFields record={record} module={record ? `user-edit` : `user-add`} />}
-    </>
+
+      {/* Conditionally render CustomFields if provided */}
+      {CustomFields && (
+        <CustomFields record={record} module={record ? `user-edit` : `user-add`} />
+      )}
+
+     
+<Form.Item>
+  <Row justify="end">
+    <Button type="primary" htmlType="submit" loading={loading}>
+      {isEditing ? "Update" : "Create"}
+    </Button>
+  </Row>
+</Form.Item>
+
+    </Form>
   );
 }

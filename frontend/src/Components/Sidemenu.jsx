@@ -25,14 +25,23 @@ const Sidemenu = ({ onMenuClick }) => {
   return (
     <Menu
       mode="inline"
-      selectedKeys={[activeMenuItem]} // Use selectedKeys instead of defaultSelectedKeys
+      selectedKeys={[activeMenuItem]}
+      style={{ backgroundColor: "white", height: "100%" }} // Make background white and height 100%
     >
-      <Menu.Item key="dashboard" icon={<DashboardOutlined />} onClick={() => handleMenuClick("dashboard")}>
+      <Menu.Item
+        key="dashboard"
+        icon={<DashboardOutlined />}
+        onClick={() => handleMenuClick("dashboard")}
+      >
         Dashboard
       </Menu.Item>
 
       <Menu.SubMenu key="users-roles" icon={<TeamOutlined />} title="Users & Roles">
-        <Menu.Item key="User" icon={<UserOutlined />} onClick={() => handleMenuClick("User")}>
+        <Menu.Item
+          key="User"
+          icon={<UserOutlined />}
+          onClick={() => handleMenuClick("User")}
+        >
           Users
         </Menu.Item>
         <Menu.Item key="/roles" icon={<KeyOutlined />}>
@@ -40,11 +49,15 @@ const Sidemenu = ({ onMenuClick }) => {
         </Menu.Item>
       </Menu.SubMenu>
 
-      <Menu.SubMenu key="manage-products" icon={<AppstoreOutlined />} title="Manage Products">
+      <Menu.SubMenu
+        key="manage-products"
+        icon={<AppstoreOutlined />}
+        title="Manage Products"
+      >
         <Menu.Item key="/categories" icon={<TagsOutlined />}>
           Categories
         </Menu.Item>
-     <Menu.Item key="/products" icon={<ShoppingCartOutlined />}>
+        <Menu.Item key="/products" icon={<ShoppingCartOutlined />}>
           Products
         </Menu.Item>
       </Menu.SubMenu>
