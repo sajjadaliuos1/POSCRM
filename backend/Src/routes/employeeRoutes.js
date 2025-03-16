@@ -51,11 +51,14 @@ router.post("/add-employee", upload.single("image"), async (req, res) => {  // â
       if (!types || types.length === 0) {
         return res.status(404).json({ message: "No employment types found" });
       }
-      res.status(200).json(types);
+      res.status(200).json(types); // âœ… Send only the array, not wrapped in { data: types }
     } catch (error) {
       console.error("Error fetching employment types:", error);
       res.status(500).json({ message: "Server error" });
     }
   });
+  
+  
+ 
   
 module.exports = router;
