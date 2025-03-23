@@ -1,7 +1,7 @@
 // Api/User.js
 export const employmenttypes = async () => {
   try {
-    const response = await fetch(`http://localhost:5000/api/employment-types`, {
+    const response = await fetch(`http://localhost:5000/api/employee-types`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -17,33 +17,31 @@ export const employmenttypes = async () => {
 
 export const addemployee = async (formData) => {
   try {
-    // Debug what's in FormData
     console.log("FormData contents before sending to API:");
     for (let pair of formData.entries()) {
-      console.log(pair[0], pair[1]);
+      console.log(pair[0], pair[1]); // Debugging logs
     }
 
     const response = await fetch(`http://localhost:5000/api/add-employee`, {
       method: "POST",
-      body: formData, // Send as FormData for file upload
-      // IMPORTANT: Do NOT set Content-Type header when sending FormData
-      // The browser will automatically set the correct Content-Type with boundary
+      body: formData, // No need to set headers; FormData handles it
     });
-    
-    // Check if the response is ok
+
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
     }
-    
+
     const result = await response.json();
-    console.log("Add Employee API Response:", result);
+    console.log("✅ Add Employee API Response:", result);
     return result;
   } catch (error) {
-    console.error("Error in addemployee API:", error);
+    console.error("❌ Error in addemployee API:", error);
     throw error;
   }
 };
+
+
 
 export const getEmployees = async () => {
   try {

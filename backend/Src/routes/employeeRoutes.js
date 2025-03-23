@@ -4,6 +4,7 @@ const Employee = require("../models/Employee");
 const upload = require("../middleware/upload");
 const router = express.Router();
 const EmploymentType = require("../models/EmploymentType");
+const EmployeeSalary = require("../models/EmployeeSalary");
 // Get all employees
 router.get("/employees", async (req, res) => {
   try {
@@ -15,46 +16,76 @@ router.get("/employees", async (req, res) => {
 });
 
 // Add new employee
-// routes/employee.js
+
+
 router.post("/add-employee", upload.single("image"), async (req, res) => {
   try {
-    console.log("Request body:", req.body);
-    console.log("Request file:", req.file);
+    console.log("🔥 Received body:", req.body);
+    console.log("🔥 Received file:", req.file);
 
-    const { fullname, contact, address, status, employeeid, currentsalary } = req.body;
-
-    // Debug received data
-    console.log("Received data:", {
-      fullname,
-      contact, 
-      address,
-      status,
-      employeeid,
-      currentsalary
-    });
+    const { fullname, contact, address, status, employeeType, currentsalary, employeeid } = req.body;
+    const image = req.file ? req.file.filename : null;
 
     // Validate required fields
-    if (!fullname || !contact || !address || !status || !employeeid || !currentsalary) {
-      return res.status(400).json({ 
-        message: "All fields except image are required",
-        receivedData: req.body,
-        missingFields: [
-          !fullname ? "fullname" : null,
-          !contact ? "contact" : null,
-          !address ? "address" : null,
-          !status ? "status" : null,
-          !employeeid ? "employeeid" : null,
-          !currentsalary ? "currentsalary" : null
-        ].filter(Boolean)
-      });
+    if (!fullname || !contact || !address || !status || !employeeType || !currentsalary) {
+      return res.status(400).json({ message: "All fields are required" });
     }
 
-    // Rest of the function...
+    // Convert salary to a number
+    const currentsalaryNumber = Number(currentsalary);
+    if (isNaN(currentsalaryNumber)) {
+      return res.status(400).json({ message: "Current salary must be a number" });
+    }
+
+    // Ensure employeeid is set
+    const finalEmployeeId = employeeid || `EMP-${Date.now()}`;
+
+    // Check if employee already exists
+    const existingEmployee = await Employee.findOne({ employeeid: finalEmployeeId });
+    if (existingEmployee) {
+      return res.status(400).json({ message: "Employee ID already exists" });
+    }
+
+    // Create new employee record
+    const newEmployee = new Employee({
+      employeeid: finalEmployeeId,
+      fullname,
+      contact,
+      address,
+      status,
+      employeeType,
+      currentsalary: currentsalaryNumber,
+      image,
+    });
+
+    const savedEmployee = await newEmployee.save();
+    console.log("✅ Successfully saved employee:", savedEmployee);
+
+    // Create salary record with auto-incremented employee_salary_id
+    const newSalaryRecord = new EmployeeSalary({
+      employee_id: savedEmployee._id,
+      amount_in: 0,
+      amount_out: 0,
+      amount_remaining: 0, // Default to 0
+    });
+
+    await newSalaryRecord.save();
+    console.log("✅ Employee Salary Entry Created:", newSalaryRecord);
+
+    res.status(201).json({
+      message: "Employee added successfully",
+      employee: savedEmployee,
+      salary: newSalaryRecord,
+    });
+
   } catch (error) {
-    console.error("Error creating employee:", error);
+    console.error("❌ Error saving employee:", error);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 });
+
+
+
 
 // Get employee by ID
 router.get("/employee/:id", async (req, res) => {
@@ -137,16 +168,13 @@ router.delete("/employee/:id", async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
-router.get("/employment-types", async (req, res) => {
+router.get("/employee-types", async (req, res) => {
   try {
-    const types = await EmploymentType.find();
-    if (!types || types.length === 0) {
-      return res.status(404).json({ message: "No employment types found" });
-    }
-    res.status(200).json({ types }); // Wrapped response for better frontend handling
+    const employeeTypes = await EmploymentType.find({}, { type: 1, description: 1 });
+    res.json(employeeTypes);
   } catch (error) {
-    console.error("Error fetching employment types:", error);
-    res.status(500).json({ message: "Server error" });
+    console.error("Error fetching employee types:", error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 module.exports = router;

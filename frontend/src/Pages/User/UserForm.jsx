@@ -1,135 +1,93 @@
-// components/UserForm.js
 import React, { useState, useEffect } from "react";
-import { Divider, Row, Col, Form, Input, Select, Upload, Button, Image, message } from "antd";
+import { Divider, Row, Col, Form, Input, Select, Upload, Button, message } from "antd";
 import { UploadOutlined } from "@ant-design/icons";
 import { employmenttypes, addemployee } from "../../Api/User";
 
 const { Option } = Select;
 
 export default function UserForm({ record, CustomFields }) {
-  const [imageUrl, setImageUrl] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [employeeTypes, setEmployeeTypes] = useState([]);
   const [form] = Form.useForm();
-  const [imageFile, setImageFile] = useState(null);
+  const [fileList, setFileList] = useState([]);
+  const [employeeTypes, setEmployeeTypes] = useState([]); // 🔥 Store employee types
 
-  // Fetch Employee Types
+  // Fetch Employee Types on Component Mount
   useEffect(() => {
     const fetchEmployeeTypes = async () => {
       try {
-        setLoading(true);
-        const response = await employmenttypes();
-        console.log("Employment types API response:", response);
-  
-        // Check if the response has the types array
-        if (response && response.types && Array.isArray(response.types)) {
-          setEmployeeTypes(response.types);
-        } else {
-          console.warn("Unexpected response structure:", response);
-          setEmployeeTypes([]);
-        }
+        const types = await employmenttypes();
+        setEmployeeTypes(types); // 🔥 Store in state
       } catch (error) {
         console.error("Error fetching employment types:", error);
-        message.error("Failed to load employee types");
-        setEmployeeTypes([]);
-      } finally {
-        setLoading(false);
       }
     };
-  
+
     fetchEmployeeTypes();
   }, []);
 
-  // Set initial form values if record exists
-  useEffect(() => {
-    if (record) {
-      form.setFieldsValue(record);
-      if (record.image) {
-        setImageUrl(record.image);
-      }
-    }
-  }, [record, form]);
-
-  // Image Upload Handling
-  const beforeUpload = (file) => {
-    console.log("beforeUpload triggered with file:", file.name);
-    
-    // Check file type
-    const isImage = file.type.startsWith('image/');
-    if (!isImage) {
-      message.error('You can only upload image files!');
-      return Upload.LIST_IGNORE;
-    }
-    
-    // Check file size
-    const isLt5M = file.size / 1024 / 1024 < 5;
-    if (!isLt5M) {
-      message.error('Image must be smaller than 5MB!');
-      return Upload.LIST_IGNORE;
-    }
-    
-    setImageFile(file);
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      setImageUrl(reader.result);
-    };
-    reader.readAsDataURL(file);
-
-    return false; // Prevent automatic upload
+  const handleImageChange = ({ fileList: newFileList }) => {
+    setFileList(newFileList);
   };
 
-  
- // Handle Form Submission
-const handleSubmit = async (values) => {
-  console.log("Form submitted with values:", values);
-
-  setLoading(true);
-  try {
-    const formData = new FormData();
-
-    // Add all form fields to FormData - safer approach without using hasOwnProperty
-    Object.keys(values).forEach(key => {
-      if (key !== "image" && values[key] !== undefined && values[key] !== null) {
-        formData.append(key, values[key]);
-        console.log(`Adding ${key}: ${values[key]} to FormData`);
+  const uploadProps = {
+    beforeUpload: (file) => {
+      const isImage = file.type.startsWith("image/");
+      if (!isImage) {
+        message.error("You can only upload image files!");
+        return Upload.LIST_IGNORE;
       }
-    });
+      const isLt5M = file.size / 1024 / 1024 < 5;
+      if (!isLt5M) {
+        message.error("Image must be smaller than 5MB!");
+        return Upload.LIST_IGNORE;
+      }
+      return false;
+    },
+    fileList,
+    onChange: handleImageChange,
+    multiple: false,
+  };
 
-    // Add image file if selected
-    if (imageFile) {
-      formData.append("image", imageFile);
-      console.log("Adding image file to FormData:", imageFile.name);
+  const handleSubmit = async (values) => {
+    if (fileList.length < 1) {
+      message.error("Please upload an image for the employee!");
+      return;
     }
 
-    // Debug FormData contents
-    console.log("FormData contents:");
-    for (let pair of formData.entries()) {
-      console.log(pair[0], pair[1]);
+    console.log("Form Submitted Values:", values);
+
+    setLoading(true);
+    const payload = new FormData();
+
+    payload.append("fullname", values.fullname || "");
+    payload.append("contact", values.contact || "");
+    payload.append("address", values.address || "");
+    payload.append("status", values.status || "");
+    payload.append("employeeType", values.employeeType || "");
+    payload.append("currentsalary", values.currentsalary || "");
+
+    if (fileList[0]?.originFileObj) {
+      payload.append("image", fileList[0].originFileObj);
     }
 
-    const response = await addemployee(formData);
-    console.log("API Response:", response);
+    try {
+      let response = await addemployee(payload);
 
-    if (response && response.employee) {
-      message.success("Employee created successfully!");
-      
-      // Reset form after successful submission
-      form.resetFields();
-      setImageUrl(null);
-      setImageFile(null);
-    } else {
-      throw new Error(response?.message || "Failed to create employee");
+      if (response) {
+        console.log("✅ User Data Received:", response);
+        message.success("Employee added successfully!");
+        form.resetFields();
+        setFileList([]);
+        
+      } else {
+        throw new Error("Employee addition failed.");
+      }
+    } catch (error) {
+      message.error(error.message || "Failed to add employee.");
+    } finally {
+      setLoading(false);
     }
-
-    return response;
-  } catch (error) {
-    console.error("Error submitting form:", error);
-    message.error(`Submission failed: ${error.message}`);
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   return (
     <Form form={form} layout="vertical" onFinish={handleSubmit} initialValues={record || {}}>
@@ -164,49 +122,15 @@ const handleSubmit = async (values) => {
           </Form.Item>
         </Col>
         <Col span={8}>
-        <Form.Item
-  name="employeeid"
-  label="Employee Type"
-  rules={[{ required: true, message: "Please select employee type!" }]}
->
-  <Select
-    placeholder={employeeTypes.length === 0 ? "Loading..." : "Select an employee type"}
-    showSearch
-    allowClear
-    loading={loading}
-    filterOption={(input, option) =>
-      option?.children?.toLowerCase().includes(input.toLowerCase())
-    }
-  >
-    {employeeTypes.length > 0 ? (
-      employeeTypes.flatMap((type, index) => {
-        const options = [];
-        
-        if (type.daily) {
-          options.push(
-            <Option key={`${type._id || `_id-${index}`}-daily`} value={type.daily}>
-              {type.daily}
-            </Option>
-          );
-        }
-        
-        if (type.monthly) {
-          options.push(
-            <Option key={`${type._id || `_id-${index}`}-monthly`} value={type.monthly}>
-              {type.monthly}
-            </Option>
-          );
-        }
-        
-        return options;
-      })
-    ) : (
-      <Option disabled key="no-data">
-        No data available
-      </Option>
-    )}
-  </Select>
-</Form.Item>
+          <Form.Item name="employeeType" label="Employee Type" rules={[{ required: true, message: "Please select employee type!" }]}>
+            <Select placeholder="Select employee type" loading={employeeTypes.length === 0}>
+              {employeeTypes.map((type) => (
+                <Option key={type._id} value={type._id}>
+                  {type.type.charAt(0).toUpperCase() + type.type.slice(1)} {/* Capitalize first letter */}
+                </Option>
+              ))}
+            </Select>
+          </Form.Item>
         </Col>
         <Col span={8}>
           <Form.Item name="currentsalary" label="Current Salary" rules={[{ required: true, message: "Please enter salary!" }]}>
@@ -218,25 +142,16 @@ const handleSubmit = async (values) => {
       <Divider orientation="left">Profile Picture</Divider>
       <Row gutter={16}>
         <Col span={8}>
-          <Form.Item name="image" label="Upload Image">
-            <Upload
-              listType="picture"
-              beforeUpload={beforeUpload}
-              maxCount={1}
-              accept="image/*"
-              showUploadList={false}
-            >
-              <Button icon={<UploadOutlined />}>Select Image</Button>
+          <Form.Item label="Upload Image">
+            <Upload {...uploadProps} listType="picture-card">
+              {fileList.length < 1 && (
+                <div>
+                  <UploadOutlined />
+                  <div style={{ marginTop: 8 }}>Upload</div>
+                </div>
+              )}
             </Upload>
           </Form.Item>
-        </Col>
-        <Col span={8}>
-          {imageUrl && (
-            <Image width={100} src={imageUrl} alt="Profile Preview" />
-          )}
-          {record?.image && !imageUrl && (
-            <Image width={100} src={record.image} alt="Current Profile" />
-          )}
         </Col>
       </Row>
 
