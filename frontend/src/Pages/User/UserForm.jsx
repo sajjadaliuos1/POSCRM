@@ -1,11 +1,21 @@
 import React, { useState, useEffect } from "react";
-import { Divider, Row, Col, Form, Input, Select, Upload, Button, message } from "antd";
+import {
+  Divider,
+  Row,
+  Col,
+  Form,
+  Input,
+  Select,
+  Upload,
+  Button,
+  message,
+} from "antd";
 import { UploadOutlined } from "@ant-design/icons";
-import { employmenttypes, addemployee } from "../../Api/User";
+import { getEmployeeTypes, addemployee } from "../../Api/User";
 
 const { Option } = Select;
 
-export default function UserForm({ record, CustomFields }) {
+export default function UserForm({ record, CustomFields, onSuccess }) {
   const [loading, setLoading] = useState(false);
   const [form] = Form.useForm();
   const [fileList, setFileList] = useState([]);
@@ -15,7 +25,7 @@ export default function UserForm({ record, CustomFields }) {
   useEffect(() => {
     const fetchEmployeeTypes = async () => {
       try {
-        const types = await employmenttypes();
+        const types = await getEmployeeTypes();
         setEmployeeTypes(types); // 🔥 Store in state
       } catch (error) {
         console.error("Error fetching employment types:", error);
@@ -78,7 +88,9 @@ export default function UserForm({ record, CustomFields }) {
         message.success("Employee added successfully!");
         form.resetFields();
         setFileList([]);
-        
+        if (onSuccess) {
+          onSuccess();
+        }
       } else {
         throw new Error("Employee addition failed.");
       }
@@ -90,21 +102,38 @@ export default function UserForm({ record, CustomFields }) {
   };
 
   return (
-    <Form form={form} layout="vertical" onFinish={handleSubmit} initialValues={record || {}}>
+    <Form
+      form={form}
+      layout="vertical"
+      onFinish={handleSubmit}
+      initialValues={record || {}}
+    >
       <Divider orientation="left">Personal Information</Divider>
       <Row gutter={16}>
         <Col span={8}>
-          <Form.Item name="fullname" label="Full Name" rules={[{ required: true, message: "Please enter full name!" }]}>
+          <Form.Item
+            name="fullname"
+            label="Full Name"
+            rules={[{ required: true, message: "Please enter full name!" }]}
+          >
             <Input placeholder="Enter full name" />
           </Form.Item>
         </Col>
         <Col span={8}>
-          <Form.Item name="contact" label="Contact" rules={[{ required: true, message: "Please enter contact number!" }]}>
+          <Form.Item
+            name="contact"
+            label="Contact"
+            rules={[{ required: true, message: "Please enter contact number!" }]}
+          >
             <Input placeholder="Enter contact number" />
           </Form.Item>
         </Col>
         <Col span={8}>
-          <Form.Item name="address" label="Address" rules={[{ required: true, message: "Please enter address!" }]}>
+          <Form.Item
+            name="address"
+            label="Address"
+            rules={[{ required: true, message: "Please enter address!" }]}
+          >
             <Input.TextArea placeholder="Enter address" />
           </Form.Item>
         </Col>
@@ -113,7 +142,11 @@ export default function UserForm({ record, CustomFields }) {
       <Divider orientation="left">Employment Details</Divider>
       <Row gutter={16}>
         <Col span={8}>
-          <Form.Item name="status" label="Status" rules={[{ required: true, message: "Please select status!" }]}>
+          <Form.Item
+            name="status"
+            label="Status"
+            rules={[{ required: true, message: "Please select status!" }]}
+          >
             <Select placeholder="Select status">
               <Option value="active">Active</Option>
               <Option value="inactive">Inactive</Option>
@@ -122,18 +155,30 @@ export default function UserForm({ record, CustomFields }) {
           </Form.Item>
         </Col>
         <Col span={8}>
-          <Form.Item name="employeeType" label="Employee Type" rules={[{ required: true, message: "Please select employee type!" }]}>
-            <Select placeholder="Select employee type" loading={employeeTypes.length === 0}>
+          <Form.Item
+            name="employeeType"
+            label="Employee Type"
+            rules={[{ required: true, message: "Please select employee type!" }]}
+          >
+            <Select
+              placeholder="Select employee type"
+              loading={employeeTypes.length === 0}
+            >
               {employeeTypes.map((type) => (
                 <Option key={type._id} value={type._id}>
-                  {type.type.charAt(0).toUpperCase() + type.type.slice(1)} {/* Capitalize first letter */}
+                  {type.type.charAt(0).toUpperCase() + type.type.slice(1)}{" "}
+                  {/* Capitalize first letter */}
                 </Option>
               ))}
             </Select>
           </Form.Item>
         </Col>
         <Col span={8}>
-          <Form.Item name="currentsalary" label="Current Salary" rules={[{ required: true, message: "Please enter salary!" }]}>
+          <Form.Item
+            name="currentsalary"
+            label="Current Salary"
+            rules={[{ required: true, message: "Please enter salary!" }]}
+          >
             <Input type="number" placeholder="Enter current salary" />
           </Form.Item>
         </Col>
@@ -155,7 +200,9 @@ export default function UserForm({ record, CustomFields }) {
         </Col>
       </Row>
 
-      {CustomFields && <CustomFields record={record} module={record ? "user-edit" : "user-add"} />}
+      {CustomFields && (
+        <CustomFields record={record} module={record ? "user-edit" : "user-add"} />
+      )}
 
       <Form.Item>
         <Row justify="end">

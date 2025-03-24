@@ -14,6 +14,7 @@ import {
   Col,
   Dropdown,
   Menu,
+  message,
 } from "antd";
 import {
   SearchOutlined,
@@ -24,7 +25,7 @@ import {
   DeleteOutlined,
   ColumnHeightOutlined,
 } from "@ant-design/icons";
-import { getEmployees } from "../../Api/User";
+import { getEmployees, getEmployeeTypes, updateEmployeeStatus } from "../../Api/User"; // Ensure updateEmployeeStatus API exists
 import UserForm from "./UserForm";
 
 const { Title } = Typography;
@@ -35,96 +36,184 @@ const UserTable = () => {
   const [showDeleted, setShowDeleted] = useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [tableDensity, setTableDensity] = useState("middle");
+  const [employeeTypes, setEmployeeTypes] = useState({});
+  
+  // Initialize message API
+  const [messageApi, contextHolder] = message.useMessage();
 
-  const densityOptions = [
-    { key: "large", label: "Default" },
-    { key: "middle", label: "Medium" },
-    { key: "small", label: "Compact" },
-  ];
+  // Fetch Employee Types from API
+  const fetchEmployeeTypes = async () => {
+    try {
+      const response = await getEmployeeTypes();
+      const typeMapping = response.reduce((acc, type) => {
+        acc[type._id] = type.type;
+        return acc;
+      }, {});
+      setEmployeeTypes(typeMapping);
+    } catch (error) {
+      console.error("Error fetching employee types:", error);
+      messageApi.error("Failed to load employee types.");
+    }
+  };
 
+  // Fetch Employees from API
   const fetchEmployees = async () => {
     setLoading(true);
     try {
-      const response = await getEmployees(); // Fetch data from API
+      const response = await getEmployees();
       const formattedData = response.map((emp) => ({
         key: emp._id,
         name: emp.fullname,
-        email: emp.contact, // Assuming email is stored in 'contact'
-        role: emp.employeeType, // Assuming 'employeeType' is the role
-        business: "Company", // Static for now
+        contact: emp.contact,
+        address: emp.address,
+        employeetypes: employeeTypes[emp.employeeType] || "Unknown",
+        currentsalary: emp.currentsalary,
         status: emp.status === "active",
         deleted: false,
       }));
       setData(formattedData);
     } catch (error) {
       console.error("Error fetching employees:", error);
+      messageApi.error("Failed to load employees data.");
     }
     setLoading(false);
   };
 
   useEffect(() => {
-    fetchEmployees();
+    fetchEmployeeTypes();
   }, []);
 
-  const handleTableSizeChange = ({ key }) => setTableDensity(key);
+  useEffect(() => {
+    if (Object.keys(employeeTypes).length > 0) {
+      fetchEmployees();
+    }
+  }, [employeeTypes]);
 
+  // Handle Employee Status Change
+  const handleStatusChange = async (key, currentStatus) => {
+    const newStatus = !currentStatus;
+    
+    // Show loading message
+    const hide = messageApi.loading('Updating status...', 0);
+    
+    try {
+      // Update the UI optimistically
+      setData((prevData) =>
+        prevData.map((item) =>
+          item.key === key ? { ...item, status: newStatus } : item
+        )
+      );
+      
+      // Call the API to update the status
+      await updateEmployeeStatus(key, newStatus ? "active" : "inactive");
+      
+      // Close loading message
+      hide();
+      
+      // Show success message with duration and callback
+      messageApi.success({
+        content: `User status changed to ${newStatus ? "Active" : "Inactive"} successfully.`,
+        duration: 4, 
+        style: { marginTop: '20px' },
+        onClose: () => {
+          console.log('Status update message closed');
+        }
+      });
+    } catch (error) {
+      // Close loading message
+      hide();
+      
+      // Revert the optimistic update
+      setData((prevData) =>
+        prevData.map((item) =>
+          item.key === key ? { ...item, status: currentStatus } : item
+        )
+      );
+      
+      // Show error message
+      messageApi.error({
+        content: "Failed to update user status. Please try again.",
+        duration: 4
+      });
+      console.error("Status update error:", error);
+    }
+  };
+
+  // Handle search functionality
   const handleSearch = (value) => {
-    const filteredData = data.filter((item) => item.name.toLowerCase().includes(value.toLowerCase()));
+    if (!value.trim()) {
+      fetchEmployees(); // Reload all data if search is empty
+      return;
+    }
+    
+    const filteredData = data.filter((item) =>
+      item.name.toLowerCase().includes(value.toLowerCase())
+    );
     setData(filteredData);
   };
 
+  // Refresh Data
   const handleRefresh = () => {
     setLoading(true);
     setTimeout(() => {
-      fetchEmployees(); // Reload data from API
+      fetchEmployees();
       setLoading(false);
+      messageApi.success("Data refreshed successfully.");
     }, 1000);
   };
 
+  // Toggle Fullscreen Mode
   const handleFullscreen = () => {
-    if (!document.fullscreenElement) document.documentElement.requestFullscreen();
-    else document.exitFullscreen();
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen();
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      }
+    }
   };
 
-  const handleStatusChange = (key) => {
-    setData((prevData) =>
-      prevData.map((item) => (item.key === key ? { ...item, status: !item.status } : item))
-    );
+  // Handle table density change
+  const handleTableSizeChange = ({ key }) => {
+    setTableDensity(key);
+    messageApi.info(`Table density set to ${key}.`);
   };
 
-  const handleDeleteToggle = (key) => {
-    setData((prevData) =>
-      prevData.map((item) => (item.key === key ? { ...item, deleted: !item.deleted } : item))
-    );
-  };
+  // Show Add Employee Modal
+  const showModal = () => setIsModalVisible(true);
 
-  const showModal = () => {
-    setIsModalVisible(true);
-  };
-
+  // Hide Modal
   const handleCancel = () => setIsModalVisible(false);
 
+  // Table Columns
   const columns = [
     { title: "Name", dataIndex: "name", key: "name" },
-    { title: "Email", dataIndex: "email", key: "email" },
-    { title: "Role", dataIndex: "role", key: "role" },
-    { title: "Business", dataIndex: "business", key: "business" },
+    { title: "Contact", dataIndex: "contact", key: "contact" },
+    { title: "Address", dataIndex: "address", key: "address" },
+    { title: "Employee Type", dataIndex: "employeetypes", key: "employeetypes" },
+    { title: "Current Salary", dataIndex: "currentsalary", key: "currentsalary" },
     {
       title: "Status",
       dataIndex: "status",
       key: "status",
       render: (status, record) => (
-        <Switch checked={status} onChange={() => handleStatusChange(record.key)} />
+        <Switch
+          checked={status}
+          onChange={() => handleStatusChange(record.key, status)}
+          checkedChildren="ON"
+          unCheckedChildren="OFF"
+          style={{ backgroundColor: status ? "#1890ff" : "#ff4d4f" }}
+        />
       ),
     },
     {
       title: "Actions",
       key: "actions",
-      render: (_, record) => (
+      render: (record) => (
         <Space>
           <Button icon={<EditOutlined />} type="link" />
           {!record.deleted && (
-            <Button icon={<DeleteOutlined />} type="link" danger onClick={() => handleDeleteToggle(record.key)} />
+            <Button icon={<DeleteOutlined />} type="link" danger />
           )}
         </Space>
       ),
@@ -133,6 +222,9 @@ const UserTable = () => {
 
   return (
     <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "20px", width: "100%" }}>
+      {/* Include context holder for message API */}
+      {contextHolder}
+      
       <Row gutter={[16, 16]} justify="space-between" align="middle">
         <Col xs={24} sm={12} md={16}>
           <Title level={4}>Manage Employees</Title>
@@ -149,12 +241,16 @@ const UserTable = () => {
             prefix={<SearchOutlined />}
             onSearch={handleSearch}
             style={{ width: 200 }}
+            allowClear
           />
           <Switch
             checked={showDeleted}
             checkedChildren="Show Deleted"
             unCheckedChildren="Hide Deleted"
-            onChange={setShowDeleted}
+            onChange={(checked) => {
+              setShowDeleted(checked);
+              messageApi.info(`${checked ? 'Showing' : 'Hiding'} deleted employees.`);
+            }}
           />
           <Tooltip title="Refresh">
             <Button icon={<ReloadOutlined />} onClick={handleRefresh} loading={loading} />
@@ -163,9 +259,13 @@ const UserTable = () => {
             <Button icon={<FullscreenOutlined />} onClick={handleFullscreen} />
           </Tooltip>
           <Tooltip title="Density">
-            <Dropdown overlay={<Menu onClick={handleTableSizeChange}>{densityOptions.map((option) => (
-              <Menu.Item key={option.key}>{option.label}</Menu.Item>
-            ))}</Menu>} placement="bottomRight">
+            <Dropdown overlay={
+              <Menu onClick={handleTableSizeChange}>
+                {["large", "middle", "small"].map((key) => (
+                  <Menu.Item key={key}>{key.charAt(0).toUpperCase() + key.slice(1)}</Menu.Item>
+                ))}
+              </Menu>
+            } placement="bottomRight">
               <Button icon={<ColumnHeightOutlined />} />
             </Dropdown>
           </Tooltip>
@@ -183,6 +283,7 @@ const UserTable = () => {
             rowKey="key"
             size={tableDensity}
             scroll={{ x: "100%" }}
+            bordered
           />
         </div>
 
@@ -196,7 +297,15 @@ const UserTable = () => {
       </Card>
 
       <Modal title="Add Employee" open={isModalVisible} onCancel={handleCancel} footer={null} width="80%" style={{ top: 20 }}>
-        <UserForm record={null} CustomFields={() => <></>} />
+        <UserForm 
+          record={null} 
+          CustomFields={() => <></>} 
+          onSuccess={() => {
+            handleCancel();
+            fetchEmployees();
+            messageApi.success("Employee added successfully!");
+          }}
+        />
       </Modal>
     </div>
   );

@@ -1,5 +1,5 @@
 // Api/User.js
-export const employmenttypes = async () => {
+export const getEmployeeTypes = async () => {
   try {
     const response = await fetch(`http://localhost:5000/api/employee-types`, {
       method: "GET",
@@ -14,7 +14,36 @@ export const employmenttypes = async () => {
     throw error;
   }
 };
+//////////////updatestatus//////
+export const updateEmployeeStatus = async (userId, status) => {
+  console.log("📤 Sending Request:", userId, status); // Debugging log
 
+  try {
+    const response = await fetch(`http://localhost:5000/api/employees/${userId}/status`, {
+      method: "PUT",
+      headers: { 
+        "Content-Type": "application/json" 
+      },
+      body: JSON.stringify({ status }), // ✅ Ensure 'status' is sent
+    });
+
+    console.log("📥 Response Status:", response.status); // Debugging log
+
+    if (!response.ok) {
+      throw new Error("Failed to update status");
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("❌ Error updating user status:", error);
+    throw error;
+  }
+};
+
+
+
+
+/////////////////
 export const addemployee = async (formData) => {
   try {
     console.log("FormData contents before sending to API:");

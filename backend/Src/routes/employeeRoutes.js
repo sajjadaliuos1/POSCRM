@@ -16,8 +16,6 @@ router.get("/employees", async (req, res) => {
 });
 
 // Add new employee
-
-
 router.post("/add-employee", upload.single("image"), async (req, res) => {
   try {
     console.log("🔥 Received body:", req.body);
@@ -81,6 +79,28 @@ router.post("/add-employee", upload.single("image"), async (req, res) => {
   } catch (error) {
     console.error("❌ Error saving employee:", error);
     res.status(500).json({ message: "Server error", error: error.message });
+  }
+});
+/////////////update employee status//////
+router.put("/employees/:id/status", async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+  if (!status) {
+    return res.status(400).json({ error: "Status field is required" });
+  }
+
+  try {
+    const employee = await Employee.findById(id);
+    if (!employee) {
+     
+      return res.status(404).json({ error: "User not found" });
+    }
+    employee.status = status;
+    await employee.save();
+    res.json({ success: true, message: "User status updated successfully" });
+  } catch (error) {
+   
+    res.status(500).json({ error: "Failed to update status" });
   }
 });
 
