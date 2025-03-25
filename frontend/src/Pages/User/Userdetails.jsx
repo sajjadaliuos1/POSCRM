@@ -37,10 +37,11 @@ const UserTable = () => {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [tableDensity, setTableDensity] = useState("middle");
   const [employeeTypes, setEmployeeTypes] = useState({});
-  
+  const [previewImage, setPreviewImage] = useState(null);
+  const [isPreviewVisible, setIsPreviewVisible] = useState(false);
   // Initialize message API
   const [messageApi, contextHolder] = message.useMessage();
-
+  const [selectedRecord, setSelectedRecord] = useState(null);
   // Fetch Employee Types from API
   const fetchEmployeeTypes = async () => {
     try {
@@ -55,7 +56,7 @@ const UserTable = () => {
       messageApi.error("Failed to load employee types.");
     }
   };
-
+  
   // Fetch Employees from API
   const fetchEmployees = async () => {
     setLoading(true);
@@ -68,6 +69,7 @@ const UserTable = () => {
         address: emp.address,
         employeetypes: employeeTypes[emp.employeeType] || "Unknown",
         currentsalary: emp.currentsalary,
+        
         status: emp.status === "active",
         deleted: false,
       }));
@@ -88,7 +90,15 @@ const UserTable = () => {
       fetchEmployees();
     }
   }, [employeeTypes]);
+  const handleEdit = (record) => {
+    setSelectedRecord(record);
+    setIsModalVisible(true);
+  };
 
+  const handleCancel = () => {
+    setIsModalVisible(false);
+    setSelectedRecord(null);
+  };
   // Handle Employee Status Change
   const handleStatusChange = async (key, currentStatus) => {
     const newStatus = !currentStatus;
@@ -180,10 +190,10 @@ const UserTable = () => {
   };
 
   // Show Add Employee Modal
-  const showModal = () => setIsModalVisible(true);
+
 
   // Hide Modal
-  const handleCancel = () => setIsModalVisible(false);
+
 
   // Table Columns
   const columns = [
@@ -192,6 +202,32 @@ const UserTable = () => {
     { title: "Address", dataIndex: "address", key: "address" },
     { title: "Employee Type", dataIndex: "employeetypes", key: "employeetypes" },
     { title: "Current Salary", dataIndex: "currentsalary", key: "currentsalary" },
+    {
+      title: 'Image',
+      dataIndex: 'image',
+      key: 'image',
+      render: (_, record) => {
+        const imageUrl = record.image || `http://localhost:5000/api/img/${record.key}`;
+    
+        return (
+          <img
+            src={imageUrl}
+            alt="Employee"
+            width="80"
+            height="50"
+            style={{ objectFit: 'cover', borderRadius: '5px', cursor: 'pointer' }}
+            onClick={() => {
+              setPreviewImage(imageUrl);
+              setIsPreviewVisible(true);
+            }}
+            onError={(e) => (e.target.src = "https://via.placeholder.com/80x50?text=No+Image")}
+          />
+        );
+      },
+    },
+    
+    
+    
     {
       title: "Status",
       dataIndex: "status",
@@ -211,7 +247,7 @@ const UserTable = () => {
       key: "actions",
       render: (record) => (
         <Space>
-          <Button icon={<EditOutlined />} type="link" />
+          <Button icon={<EditOutlined />} type="link" onClick={() => handleEdit(record)} />
           {!record.deleted && (
             <Button icon={<DeleteOutlined />} type="link" danger />
           )}
@@ -225,14 +261,16 @@ const UserTable = () => {
       {/* Include context holder for message API */}
       {contextHolder}
       
-      <Row gutter={[16, 16]} justify="space-between" align="middle">
-        <Col xs={24} sm={12} md={16}>
-          <Title level={4}>Manage Employees</Title>
-        </Col>
-        <Col xs={24} sm={12} md={8} style={{ textAlign: "right" }}>
-          <Button type="primary" onClick={showModal}>+ Add Employee</Button>
-        </Col>
-      </Row>
+      <Row justify="space-between">
+              <Col>
+                <Title level={4}>Manage Employees</Title>
+              </Col>
+              <Col>
+                <Button type="primary" onClick={() => setIsModalVisible(true)}>
+                  + Add Employee
+                </Button>
+              </Col>
+            </Row>
 
       <Card>
         <Space style={{ width: "100%", justifyContent: "flex-end", marginBottom: 16, flexWrap: "nowrap" }}>
@@ -294,19 +332,40 @@ const UserTable = () => {
           total={data.length}
           showSizeChanger
         />
+          
       </Card>
 
-      <Modal title="Add Employee" open={isModalVisible} onCancel={handleCancel} footer={null} width="80%" style={{ top: 20 }}>
-        <UserForm 
-          record={null} 
-          CustomFields={() => <></>} 
-          onSuccess={() => {
-            handleCancel();
-            fetchEmployees();
-            messageApi.success("Employee added successfully!");
-          }}
-        />
-      </Modal>
+      <Modal
+             title={selectedRecord ? "Edit Employee" : "Add Employee"}
+             open={isModalVisible}
+             onCancel={handleCancel}
+             footer={null}
+             width="80%" 
+             style={{ top: 20 }}
+           >
+             <UserForm
+               record={selectedRecord}
+               onSuccess={() => {
+                 handleCancel();
+                 fetchEmployees();
+                 messageApi.success("Employee saved successfully!");
+               }}
+             />
+           </Modal>
+      <Modal
+  open={isPreviewVisible}
+  footer={null}
+  onCancel={() => setIsPreviewVisible(false)}
+  centered
+>
+  <img 
+    src={previewImage || "https://via.placeholder.com/300x300?text=No+Preview"} 
+    alt="Employee image" 
+    style={{ width: '100%', maxHeight: '80vh', objectFit: 'contain', borderRadius: '10px' }} 
+  />
+</Modal>
+
+
     </div>
   );
 };

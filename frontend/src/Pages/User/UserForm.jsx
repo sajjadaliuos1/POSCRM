@@ -20,7 +20,36 @@ export default function UserForm({ record, CustomFields, onSuccess }) {
   const [form] = Form.useForm();
   const [fileList, setFileList] = useState([]);
   const [employeeTypes, setEmployeeTypes] = useState([]); // 🔥 Store employee types
-
+  useEffect(() => {
+    if (record) {
+      form.setFieldsValue({
+        fullname: record.name,
+        contact: record.contact,
+        address: record.address,
+        status: record.status ? "active" : "inactive",
+        employeeType: record.employeeType?._id || record.employeeType, 
+        currentsalary: record.currentsalary,
+      });
+  
+      // Check if record.image exists and update fileList
+      if (record.key) {
+        setFileList([
+          {
+            uid: "-1",
+            name: "Existing Image",
+            status: "done",
+            url: `http://localhost:5000/api/img/${record.key}`, // Ensure correct URL
+          },
+        ]);
+      } else {
+        setFileList([]); // Reset if no image
+      }
+    } else {
+      form.resetFields();
+      setFileList([]);
+    }
+  }, [record, form ,employeeTypes]);
+  
   // Fetch Employee Types on Component Mount
   useEffect(() => {
     const fetchEmployeeTypes = async () => {
@@ -34,7 +63,9 @@ export default function UserForm({ record, CustomFields, onSuccess }) {
 
     fetchEmployeeTypes();
   }, []);
-
+  const handleFileChange = ({ fileList }) => {
+    setFileList(fileList);
+  };
   const handleImageChange = ({ fileList: newFileList }) => {
     setFileList(newFileList);
   };
@@ -155,23 +186,24 @@ export default function UserForm({ record, CustomFields, onSuccess }) {
           </Form.Item>
         </Col>
         <Col span={8}>
-          <Form.Item
-            name="employeeType"
-            label="Employee Type"
-            rules={[{ required: true, message: "Please select employee type!" }]}
-          >
-            <Select
-              placeholder="Select employee type"
-              loading={employeeTypes.length === 0}
-            >
-              {employeeTypes.map((type) => (
-                <Option key={type._id} value={type._id}>
-                  {type.type.charAt(0).toUpperCase() + type.type.slice(1)}{" "}
-                  {/* Capitalize first letter */}
-                </Option>
-              ))}
-            </Select>
-          </Form.Item>
+        <Form.Item
+  name="employeeType"
+  label="Employee Type"
+  rules={[{ required: true, message: "Please select employee type!" }]}
+>
+  <Select
+    placeholder="Select employee type"
+    loading={employeeTypes.length === 0}
+    allowClear
+  >
+    {employeeTypes.map((type) => (
+      <Option key={type._id} value={type._id}> 
+        {type.type.charAt(0).toUpperCase() + type.type.slice(1)}
+      </Option>
+    ))}
+  </Select>
+</Form.Item>
+
         </Col>
         <Col span={8}>
           <Form.Item
@@ -187,16 +219,22 @@ export default function UserForm({ record, CustomFields, onSuccess }) {
       <Divider orientation="left">Profile Picture</Divider>
       <Row gutter={16}>
         <Col span={8}>
-          <Form.Item label="Upload Image">
-            <Upload {...uploadProps} listType="picture-card">
-              {fileList.length < 1 && (
-                <div>
-                  <UploadOutlined />
-                  <div style={{ marginTop: 8 }}>Upload</div>
-                </div>
-              )}
-            </Upload>
-          </Form.Item>
+        <Form.Item label="Upload Image">
+  <Upload
+    {...uploadProps}
+    listType="picture-card"
+    fileList={fileList} // Ensure this is set correctly
+    onChange={handleFileChange}
+  >
+    {fileList.length < 1 && (
+      <div>
+        <UploadOutlined />
+        <div style={{ marginTop: 8 }}>Upload</div>
+      </div>
+    )}
+  </Upload>
+</Form.Item>
+
         </Col>
       </Row>
 
