@@ -84,20 +84,28 @@ export const getEmployees = async () => {
   }
 };
 ////////////update Employee//////
-export const updateEmployee = async (id, formData) => {
+export const updateEmployee = async (id, formData) => {   
   try {
-    const response = await fetch(`http://localhost:5000/api/update-employee/${id}`, {
-      method: "PUT",
-      body: formData, // Send as FormData for file upload
-    });
-    
-    return await response.json();
+      console.log("Updating employee with ID:", id);
+      
+      const response = await fetch(`http://localhost:5000/api/update-employee/${id}`, {
+          method: "PUT",
+          body: formData, // Send as FormData for file upload
+      });
+      
+      if (!response.ok) {
+          const errorText = await response.text();
+          console.error('Error response:', errorText);
+          throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+      }
+      
+      return await response.json();
   } catch (error) {
-    console.error("Error updating employee:", error);
-    throw error;
-  }
+      console.error("Error updating employee:", error);
+      throw error;
+  } 
 };
-
+///////////////Delete Employee////
 export const deleteEmployee = async (id) => {
   try {
     const response = await fetch(`http://localhost:5000/api/employee/${id}`, {

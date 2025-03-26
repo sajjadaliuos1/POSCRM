@@ -1,12 +1,15 @@
-// routes/employee.js
-const express = require("express");
-const Employee = require("../models/Employee");
-const upload = require("../middleware/upload");
+import express from "express";
+import mongoose from "mongoose";
+import path from "path";
+import fs from "fs";
+
+import Employee from "../models/Employee.js";
+import upload from "../middleware/upload.js";
+import EmploymentType from "../models/EmploymentType.js";
+import EmployeeSalary from "../models/EmployeeSalary.js";
+
 const router = express.Router();
-const EmploymentType = require("../models/EmploymentType");
-const EmployeeSalary = require("../models/EmployeeSalary");
-const path = require("path");
-const fs = require("fs"); 
+
 // Get all employees
 router.get("/employees", async (req, res) => {
   try {
@@ -83,7 +86,8 @@ router.post("/add-employee", upload.single("image"), async (req, res) => {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 });
-/////////////update employee status//////
+
+// Update employee status
 router.put("/employees/:id/status", async (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
@@ -94,20 +98,15 @@ router.put("/employees/:id/status", async (req, res) => {
   try {
     const employee = await Employee.findById(id);
     if (!employee) {
-     
       return res.status(404).json({ error: "User not found" });
     }
     employee.status = status;
     await employee.save();
     res.json({ success: true, message: "User status updated successfully" });
   } catch (error) {
-   
     res.status(500).json({ error: "Failed to update status" });
   }
 });
-
-
-
 
 // Get employee by ID
 router.get("/employee/:id", async (req, res) => {
@@ -123,63 +122,56 @@ router.get("/employee/:id", async (req, res) => {
 });
 
 // Update employee
-router.put("/update-employee/:id", upload.single("image"), async (req, res) => {
-  try {
-    console.log("🔥 Received body:", req.body);
-    console.log("🔥 Received file:", req.file);
+router.put("/update-employee/:id", upload.single("image"), async (req, res) => {   
+  try {       
+    const id = req.params.id;
+    console.log("Received ID:", id);
+    console.log("Received body:", req.body);
+    console.log("Received file:", req.file);        
 
-    // Trim all keys in req.body to remove any accidental spaces
-    Object.keys(req.body).forEach((key) => {
-      req.body[key.trim()] = req.body[key]; 
-      if (key !== key.trim()) {
-        delete req.body[key]; // Remove the incorrectly spaced key
-      }
-    });
+    // Validate ID
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid employee ID" });
+    }
 
     const { fullname, contact, address, status, employeeType, currentsalary } = req.body;
-    const image = req.file ? req.file.filename : null;
-
-    // Validate required fields
-    if (!fullname || !contact || !address || !status || !employeeType || !currentsalary) {
-      return res.status(400).json({ message: "All fields are required" });
+    
+    // Construct the update object
+    const updateData = {
+      fullname,
+      contact,
+      address,
+      status,
+      employeeType,
+      currentsalary: Number(currentsalary), // Ensure it's a number
+    };
+    
+    // Add image to updateData if a file was uploaded
+    if (req.file) {
+      updateData.image = req.file.filename;
     }
-
-    // Convert salary to a number
-    const currentsalaryNumber = Number(currentsalary);
-    if (isNaN(currentsalaryNumber)) {
-      return res.status(400).json({ message: "Current salary must be a number" });
-    }
-
-    // Find employee by ID
-    const employee = await Employee.findById(req.params.id);
-    if (!employee) {
+    
+    // Update the employee in the database
+    const updatedEmployee = await Employee.findByIdAndUpdate(id, updateData, {
+      new: true, // Return the updated document
+      runValidators: true // Run model validations
+    });
+    
+    if (!updatedEmployee) {
       return res.status(404).json({ message: "Employee not found" });
     }
-
-    // Update employee details
-    employee.fullname = fullname;
-    employee.contact = contact;
-    employee.address = address;
-    employee.status = status;
-    employee.employeeType = employeeType;
-    employee.currentsalary = currentsalaryNumber;
-    if (image) {
-      employee.image = image;
-    }
-
-    const updatedEmployee = await employee.save();
-    console.log("✅ Successfully updated employee:", updatedEmployee);
-
-    res.status(200).json({
-      message: "Employee updated successfully",
-      employee: updatedEmployee,
-    });
+    
+    res.json(updatedEmployee);
   } catch (error) {
-    console.error("❌ Error updating employee:", error);
-    res.status(500).json({ message: "Server error", error: error.message });
-  }
+    console.error("Error updating employee:", error);
+    res.status(500).json({ 
+      message: "Error updating employee", 
+      error: error.message 
+    });
+  } 
 });
-//////get employee images////
+
+// Get employee images
 router.get("/img/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -193,7 +185,7 @@ router.get("/img/:id", async (req, res) => {
     }
 
     // Construct the correct image path
-    const imagePath = path.resolve(__dirname, '../../public/assets', imageRecord.image);
+    const imagePath = path.resolve(process.cwd(), 'public/assets', imageRecord.image);
     console.log("Full Image Path:", imagePath);
 
     // Check if file exists before sending
@@ -208,6 +200,7 @@ router.get("/img/:id", async (req, res) => {
     res.status(500).json({ error: "Unable to fetch image", details: error.message });
   }
 });
+
 // Delete employee
 router.delete("/employee/:id", async (req, res) => {
   try {
@@ -219,7 +212,7 @@ router.delete("/employee/:id", async (req, res) => {
     
     // Delete image if exists
     if (employee.image) {
-      const imagePath = path.join(__dirname, '..', employee.image);
+      const imagePath = path.join(process.cwd(), 'public/assets', employee.image);
       if (fs.existsSync(imagePath)) {
         fs.unlinkSync(imagePath);
       }
@@ -232,7 +225,7 @@ router.delete("/employee/:id", async (req, res) => {
   }
 });
 
-/////////employee types////
+// Get employee types
 router.get("/employee-types", async (req, res) => {
   try {
     const employeeTypes = await EmploymentType.find({}, { type: 1, description: 1 });
@@ -242,4 +235,5 @@ router.get("/employee-types", async (req, res) => {
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
-module.exports = router;
+
+export default router;

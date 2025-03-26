@@ -220,7 +220,7 @@ const UserTable = () => {
               setPreviewImage(imageUrl);
               setIsPreviewVisible(true);
             }}
-            onError={(e) => (e.target.src = "https://via.placeholder.com/80x50?text=No+Image")}
+           
           />
         );
       },
@@ -340,7 +340,7 @@ const UserTable = () => {
              open={isModalVisible}
              onCancel={handleCancel}
              footer={null}
-             width="80%" 
+             width="50%" 
              style={{ top: 20 }}
            >
              <UserForm
